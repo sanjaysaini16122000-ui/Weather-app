@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Weather Forecast - Jaipur & Beyond</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.4);
+            --secondary: #10b981;
+            --accent: #f43f5e;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+        }
+
+        .search-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        form {
+            display: flex;
+            width: 100%;
+            gap: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 14px 0 var(--primary-glow);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 var(--primary-glow);
+            filter: brightness(1.1);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .stat-unit {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+        }
+
+        .prediction-val {
+            color: var(--accent);
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .chart img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .data-table-container {
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-dim);
+            font-weight: 600;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .flash {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--accent);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            h1 { font-size: 2rem; }
+            .search-card { flex-direction: column; }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Weather AI Predictor</h1>
+            <p class="subtitle">Linear Regression driven temperature forecasting for any city</p>
+        </header>
+
+        <section class="search-card">
+            <form method="POST">
+                <input type="text" name="city" placeholder="Enter city name (e.g. Jaipur)" required>
+                <button type="submit">Analyze Now</button>
+            </form>
+        </section>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if data %}
+        <div class="fade-in">
+            <div class="dashboard">
+                <div class="stat-card">
+                    <div class="stat-label">Current City</div>
+                    <div class="stat-value" style="font-size: 1.8rem">{{ data.city.capitalize() }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Current Temp</div>
+                    <div class="stat-value">{{ data.current_temp }}<span class="stat-unit">°C</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AI Forecast (Next)</div>
+                    <div class="stat-value prediction-val">{{ data.next_pred }}<span class="stat-unit">°C</span></div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 Temperature Trend & Predictions</h2>
+                <div class="chart">
+                    <img src="{{ data.temp_plot }}" alt="Temperature Plot">
+                </div>
+            </div>
+
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="chart-container" style="margin-bottom: 0;">
+                    <h2>💧 Humidity Levels</h2>
+                    <div class="chart">
+                        <img src="{{ data.humidity_plot }}" alt="Humidity Plot">
+                    </div>
+                </div>
+
+                <div class="chart-container" style="margin-bottom: 0;">
+                    <h2>🌧️ Rain Forecast</h2>
+                    <div class="chart">
+                        <img src="{{ data.rain_plot }}" alt="Rain Plot">
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table-container">
+                    <h2>📝 Recent Data Points</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Temp</th>
+                                <th>Humid</th>
+                                <th>Rain</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data.table_data %}
+                            <tr>
+                                <td>{{ row.datetime.strftime('%d %b, %H:%M') if row.datetime.strftime else row.datetime }}</td>
+                                <td>{{ row.temp }}°C</td>
+                                <td>{{ row.humidity }}%</td>
+                                <td>{{ row.rain }} mm</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card" style="padding: 4rem; text-align: center; color: var(--text-dim);">
+            <p>Enter a city name above to see the AI weather analysis.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Simple entry animation for stat cards
+        document.querySelectorAll('.stat-card').forEach((card, index) => {
+            card.style.animation = `fadeIn 0.5s ease-out ${index * 0.1}s forwards`;
+            card.style.opacity = '0';
+        });
+    </script>
+</body>
+</html>
