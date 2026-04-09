@@ -451,6 +451,7 @@
 
         let weatherLayer;
         const apiKey = "{{ data.api_key }}";
+        const cityMarker = L.marker([{{ data.lat }}, {{ data.lon }}]).addTo(map);
 
         function switchLayer(type, btn) {
             if (weatherLayer) map.removeLayer(weatherLayer);
@@ -459,6 +460,25 @@
             weatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/${layerCode}/{z}/{x}/{y}.png?appid=${apiKey}`, {
                 opacity: 0.6
             }).addTo(map);
+
+            // Update Popup Content
+            const popupContent = type === 'temp' ? `
+                <div style="text-align: center; color: #1e293b; font-family: 'Outfit', sans-serif;">
+                    <h4 style="margin: 0 0 5px 0;">{{ data.city.capitalize() }}</h4>
+                    <img src="http://openweathermap.org/img/wn/{{ data.weather_icon }}@2x.png" style="width: 50px; height: 50px; margin: -5px 0;">
+                    <div style="font-size: 1.2rem; font-weight: 700;">{{ data.current_temp }}°C</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">{{ data.weather_desc }}</div>
+                </div>
+            ` : `
+                <div style="text-align: center; color: #1e293b; font-family: 'Outfit', sans-serif;">
+                    <h4 style="margin: 0 0 5px 0;">{{ data.city.capitalize() }}</h4>
+                    <img src="http://openweathermap.org/img/wn/09d@2x.png" style="width: 50px; height: 50px; margin: -5px 0;">
+                    <div style="font-size: 1.2rem; font-weight: 700;">{{ data.current_rain }} mm</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Precipitation (1h)</div>
+                </div>
+            `;
+            
+            cityMarker.bindPopup(popupContent).openPopup();
 
             // Update UI
             if (btn) {

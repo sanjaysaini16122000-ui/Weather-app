@@ -188,6 +188,9 @@ def index():
                 'ai_advice': ai_advice,
                 'lat': current_api_data['coord']['lat'],
                 'lon': current_api_data['coord']['lon'],
+                'weather_desc': current_api_data['weather'][0]['description'].capitalize(),
+                'weather_icon': current_api_data['weather'][0]['icon'],
+                'current_rain': current_api_data.get('rain', {}).get('1h', 0),
                 'api_key': API_KEY, # Needed for browser-side tile loading
                 'table_data': df.head(15).to_dict('records') 
             }
