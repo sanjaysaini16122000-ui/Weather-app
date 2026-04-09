@@ -131,6 +131,38 @@ def create_rain_plot(df, city):
     plt.close()
     return f"data:image/png;base64,{plot_url}"
 
+def generate_ai_advisory(current_data, future_df, city):
+    temp = current_data['main']['temp']
+    humidity = current_data['main']['humidity']
+    rain = current_data.get('rain', {}).get('1h', 0)
+    
+    # ML Insight
+    next_3h_pred = future_df['predicted_temp'].iloc[0]
+    trend = "rising" if next_3h_pred > temp else "falling"
+    diff = abs(next_3h_pred - temp)
+    
+    advice = f"In {city.capitalize()}, it's currently {round(temp)}°C. "
+    
+    if temp > 35:
+        advice += "The heat is intense—stay hydrated and avoid direct sun. "
+    elif temp < 15:
+        advice += "It's quite chilly—keep yourself warm. "
+    else:
+        advice += "The temperature is quite comfortable for outdoor activities. "
+        
+    if humidity > 70:
+        advice += "High humidity might make it feel a bit muggy. "
+    
+    if rain > 0:
+        advice += "There's some rain in the area, don't forget an umbrella! "
+        
+    if diff > 1.5:
+        advice += f"AI analysis shows a {trend} trend, expect it to get {trend} by ~{round(diff)}°C soon."
+    else:
+        advice += "The temperature seems stable for the next few hours."
+        
+    return advice
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     weather_data = None
@@ -143,6 +175,7 @@ def index():
             temp_plot = create_plot(df, future_df, city)
             humidity_plot = create_humidity_plot(df, city)
             rain_plot = create_rain_plot(df, city)
+            ai_advice = generate_ai_advisory(current_api_data, future_df, city)
             
             weather_data = {
                 'city': city,
@@ -152,6 +185,7 @@ def index():
                 'temp_plot': temp_plot,
                 'humidity_plot': humidity_plot,
                 'rain_plot': rain_plot,
+                'ai_advice': ai_advice,
                 'table_data': df.head(15).to_dict('records') 
             }
         else:

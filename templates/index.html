@@ -209,6 +209,46 @@
             border: 1px solid rgba(244, 63, 94, 0.2);
         }
 
+        /* AI Advisory Styling */
+        .ai-advisory-box {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(168, 85, 247, 0.15));
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            padding: 1.5rem 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            backdrop-filter: blur(10px);
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        .ai-icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.6));
+        }
+
+        .ai-content h3 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #a855f7;
+            margin-bottom: 0.3rem;
+        }
+
+        .ai-text {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+
+        /* Autocomplete Styling Removed */
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.1); }
+            50% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.3); }
+        }
+
         @media (max-width: 768px) {
             .dashboard {
                 grid-template-columns: 1fr;
@@ -236,9 +276,20 @@
         </header>
 
         <section class="search-card">
-            <form method="POST">
-                <input type="text" name="city" placeholder="Enter city name (e.g. Jaipur)" required>
+            <form method="POST" id="searchForm">
+                <input type="text" name="city" id="cityInput" placeholder="Enter city name (e.g. Jaipur)" list="cities" required>
                 <button type="submit">Analyze Now</button>
+                <datalist id="cities">
+                    <option value="Jaipur">
+                    <option value="Delhi">
+                    <option value="Mumbai">
+                    <option value="Bangalore">
+                    <option value="Kolkata">
+                    <option value="Chomu">
+                    <option value="New York">
+                    <option value="London">
+                    <option value="Tokyo">
+                </datalist>
             </form>
         </section>
 
@@ -252,6 +303,14 @@
 
         {% if data %}
         <div class="fade-in">
+            <div class="ai-advisory-box">
+                <div class="ai-icon">✨</div>
+                <div class="ai-content">
+                    <h3>AI Weather Advisory</h3>
+                    <div class="ai-text">{{ data.ai_advice }}</div>
+                </div>
+            </div>
+
             <div class="dashboard">
                 <div class="stat-card">
                     <div class="stat-label">Current City</div>
