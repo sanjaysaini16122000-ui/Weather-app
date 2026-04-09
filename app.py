@@ -19,25 +19,33 @@ BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
 def fetch_weather_data(city):
     params = {'q': city, 'appid': API_KEY, 'units': 'metric'}
     try:
-        response = requests.get(BASE_URL, params=params)
-        response.raise_for_status()
-        data = response.json()
+        # 1. Fetch CURRENT weather for the main dashboard box
+        curr_url = "http://api.openweathermap.org/data/2.5/weather"
+        curr_resp = requests.get(curr_url, params=params)
+        curr_resp.raise_for_status()
+        current_data = curr_resp.json()
+
+        # 2. Fetch 5-DAY forecast for the ML model and charts
+        fore_resp = requests.get(BASE_URL, params=params)
+        fore_resp.raise_for_status()
+        forecast_data = fore_resp.json()
         
         weather_list = []
-        for entry in data['list']:
+        for entry in forecast_data['list']:
             weather_list.append({
                 'datetime': entry['dt_txt'],
                 'temp': entry['main']['temp'],
                 'humidity': entry['main']['humidity'],
                 'pressure': entry['main']['pressure'],
-                'rain': entry.get('rain', {}).get('3h', 0)  # Volume in mm
+                'rain': entry.get('rain', {}).get('3h', 0)
             })
         df = pd.DataFrame(weather_list)
         df['datetime'] = pd.to_datetime(df['datetime'])
-        return df
+        
+        return df, current_data
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None
+        return None, None
 
 def train_and_predict(df):
     X = np.array(df.index).reshape(-1, 1)
@@ -128,7 +136,7 @@ def index():
     weather_data = None
     if request.method == 'POST':
         city = request.form.get('city', 'Jaipur').strip()
-        df = fetch_weather_data(city)
+        df, current_api_data = fetch_weather_data(city)
         
         if df is not None:
             model, future_df = train_and_predict(df)
@@ -138,13 +146,13 @@ def index():
             
             weather_data = {
                 'city': city,
-                'current_temp': round(df['temp'].iloc[-1], 1),
-                'current_humidity': df['humidity'].iloc[-1],
+                'current_temp': round(current_api_data['main']['temp'], 1),
+                'current_humidity': current_api_data['main']['humidity'],
                 'next_pred': round(future_df['predicted_temp'].iloc[0], 1),
                 'temp_plot': temp_plot,
                 'humidity_plot': humidity_plot,
                 'rain_plot': rain_plot,
-                'table_data': df.tail(10).to_dict('records') # Show more records for rain
+                'table_data': df.head(15).to_dict('records') 
             }
         else:
             flash(f"Could not find weather data for '{city}'. Please check the spelling.")
