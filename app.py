@@ -186,6 +186,9 @@ def index():
                 'humidity_plot': humidity_plot,
                 'rain_plot': rain_plot,
                 'ai_advice': ai_advice,
+                'lat': current_api_data['coord']['lat'],
+                'lon': current_api_data['coord']['lon'],
+                'api_key': API_KEY, # Needed for browser-side tile loading
                 'table_data': df.head(15).to_dict('records') 
             }
         else:

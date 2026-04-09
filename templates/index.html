@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Weather Forecast - Jaipur & Beyond</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
@@ -242,6 +244,45 @@
             color: #e2e8f0;
         }
 
+        /* Map Styling */
+        #map {
+            height: 450px;
+            width: 100%;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            z-index: 10;
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .layer-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .layer-btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .layer-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
         /* Autocomplete Styling Removed */
 
         @keyframes pulse-glow {
@@ -333,6 +374,17 @@
                 </div>
             </div>
 
+            <div class="chart-container">
+                <div class="map-header">
+                    <h2>🗺️ Interactive Weather Map</h2>
+                    <div class="layer-controls">
+                        <button class="layer-btn active" onclick="switchLayer('temp', this)">Temperature</button>
+                        <button class="layer-btn" onclick="switchLayer('rain', this)">Rain/Precipitation</button>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+
             <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                 <div class="chart-container" style="margin-bottom: 0;">
                     <h2>💧 Humidity Levels</h2>
@@ -387,6 +439,37 @@
             card.style.animation = `fadeIn 0.5s ease-out ${index * 0.1}s forwards`;
             card.style.opacity = '0';
         });
+
+        // Interactive Map Implementation
+        {% if data.lat %}
+        const map = L.map('map').setView([{{ data.lat }}, {{ data.lon }}], 9);
+        
+        // Base Dark Map Theme
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        let weatherLayer;
+        const apiKey = "{{ data.api_key }}";
+
+        function switchLayer(type, btn) {
+            if (weatherLayer) map.removeLayer(weatherLayer);
+            
+            const layerCode = type === 'temp' ? 'temp_new' : 'precipitation_new';
+            weatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/${layerCode}/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                opacity: 0.6
+            }).addTo(map);
+
+            // Update UI
+            if (btn) {
+                document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+        }
+
+        // Default Layer (passing null for btn on first load)
+        switchLayer('temp', null);
+        {% endif %}
     </script>
 </body>
 </html>
