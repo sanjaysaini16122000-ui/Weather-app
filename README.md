@@ -1,5 +1,7 @@
 # 🌦️ AI-Based Weather Forecasting System
 
+![Dashboard Preview](screenshot.png)
+
 A professional, high-fidelity weather analytics dashboard that combines **Real-Time API Data** with **Machine Learning Predictions** to provide a comprehensive weather journey.
 
 ![Dashboard Preview](https://img.shields.io/badge/UI-Glassmorphism-blueviolet)
