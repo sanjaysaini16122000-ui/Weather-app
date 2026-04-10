@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for web servers
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import io
@@ -25,12 +26,22 @@ def fetch_weather_data(city):
         curr_resp.raise_for_status()
         current_data = curr_resp.json()
 
-        # 2. Fetch 5-DAY forecast for current display stats
+        # 2. Fetch 5-DAY forecast (Restore this specifically for the TABLE)
         fore_resp = requests.get(BASE_URL, params=params)
         fore_resp.raise_for_status()
         forecast_data = fore_resp.json()
         
-        # 3. Fetch HISTORICAL + FORECAST data from Open-Meteo (3 days past + 7 days future)
+        # Prepare official table data (Original format)
+        table_list = []
+        for entry in forecast_data['list']:
+            table_list.append({
+                'datetime': pd.to_datetime(entry['dt_txt']),
+                'temp': round(entry['main']['temp'], 1),
+                'humidity': entry['main']['humidity'], 
+                'rain': round(entry.get('rain', {}).get('3h', 0), 1)
+            })
+        
+        # 3. Fetch HISTORICAL + FORECAST data from Open-Meteo (Keep for CHARTS)
         lat, lon = current_data['coord']['lat'], current_data['coord']['lon']
         meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relative_humidity_2m,precipitation&past_days=4"
         meteo_resp = requests.get(meteo_url)
@@ -42,10 +53,10 @@ def fetch_weather_data(city):
             'datetime': pd.to_datetime(hourly['time']),
             'temp': hourly['temperature_2m'],
             'humidity': hourly['relative_humidity_2m'],
-            'rain': hourly['precipitation'] # Added this to fix KeyError
+            'rain': hourly['precipitation']
         })
         
-        return df, current_data
+        return df, current_data, table_list
     except Exception as e:
         print(f"Error fetching data: {e}")
         return None, None
@@ -74,46 +85,49 @@ def train_and_predict(df):
     return model, future_df
 
 def create_plot(df, future_df, city):
-    plt.figure(figsize=(10, 5), facecolor='none')
+    plt.figure(figsize=(14, 5.5), facecolor='none') # Wider for 11 days
     
-    # Identify index of "Now" (closest to current time)
+    # Identify index of "Now"
     now = pd.Timestamp.now()
-    # Ensure df is sorted by time
     df = df.sort_values('datetime')
     
-    # Plot historical data (Past - Shaded differently)
+    # Plot historical data (Past)
     past_df = df[df['datetime'] <= now]
     future_api_df = df[df['datetime'] > now]
     
-    plt.plot(past_df['datetime'], past_df['temp'], label='Observed (Past 3-4 Days)', color='#6366f1', linewidth=2)
+    plt.plot(past_df['datetime'], past_df['temp'], label='Observed (Past)', color='#6366f1', linewidth=2.5)
     plt.fill_between(past_df['datetime'], past_df['temp'], color='#6366f1', alpha=0.1)
     
     # Plot Official Forecast
-    plt.plot(future_api_df['datetime'], future_api_df['temp'], label='Official Forecast (Next 7 Days)', color='#4f46e5', marker='o', markersize=3, linewidth=2)
+    plt.plot(future_api_df['datetime'], future_api_df['temp'], label='Forecast (Official)', color='#4f46e5', marker='o', markersize=3, linewidth=2.5)
     
     # Plot AI Trend prediction
-    plt.plot(future_df['datetime'], future_df['predicted_temp'], label='AI Linear Trend (Extension)', color='#f43f5e', linestyle='--', linewidth=2)
+    plt.plot(future_df['datetime'], future_df['predicted_temp'], label='AI Extension', color='#f43f5e', linestyle='--', linewidth=2.5)
     
-    # Add a "NOW" vertical line precisely at current time
-    plt.axvline(x=now, color='#fbbf24', linestyle='--', label=f'PRESENT: {now.strftime("%b %d")}', linewidth=2, zorder=5)
+    # Add a "NOW" vertical line
+    plt.axvline(x=now, color='#fbbf24', linestyle='--', label=f'PRESENT', linewidth=2.5, zorder=5)
     
-    plt.title(f"Temperature Journey: Past, Present & Future for {city.capitalize()}", color='white', fontsize=14, pad=20, fontweight='bold')
-    plt.xlabel("Timeline", color='#cbd5e1')
+    plt.title(f"Temperature Journey for {city.capitalize()}", color='white', fontsize=16, pad=25, fontweight='bold')
+    plt.xlabel("Days & Hours (Timeline)", color='#cbd5e1', labelpad=10)
     plt.ylabel("Temp (°C)", color='#cbd5e1')
     
-    # Fix the Legend
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', loc='upper left', fontsize=9)
-    plt.grid(True, linestyle='--', alpha=0.1)
-    
-    # Styling for dark mode
+    # Enhanced Grid (Major = Day, Minor = 6h)
     ax = plt.gca()
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    
+    plt.grid(True, which='major', linestyle='-', alpha=0.15)
+    plt.grid(True, which='minor', linestyle=':', alpha=0.05)
+    
+    plt.xticks(rotation=0, horizontalalignment='center') # Horizontal for readability
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', loc='upper left', fontsize=9)
+    
+    # Dark mode spines
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
-    ax.tick_params(colors='#cbd5e1', labelsize=8)
-    
-    # Format X-axis to show readable dates
-    plt.xticks(rotation=45)
+    ax.tick_params(colors='#cbd5e1', labelsize=9)
     
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight', transparent=True)
@@ -123,26 +137,27 @@ def create_plot(df, future_df, city):
     return f"data:image/png;base64,{plot_url}"
 
 def create_humidity_plot(df, city):
-    plt.figure(figsize=(10, 4), facecolor='none')
-    
-    # Sort and split data for coloring
+    plt.figure(figsize=(14, 4), facecolor='none')
     df = df.sort_values('datetime')
     now = pd.Timestamp.now()
     
-    plt.plot(df['datetime'], df['humidity'], color='#10b981', linewidth=2, label='Humidity %')
+    plt.plot(df['datetime'], df['humidity'], color='#10b981', linewidth=2.5, label='Humidity %')
     plt.fill_between(df['datetime'], df['humidity'], color='#10b981', alpha=0.1)
+    plt.axvline(x=now, color='#fbbf24', linestyle='--', label='PRESENT', linewidth=2.5, zorder=5)
     
-    # Add a "NOW" vertical line
-    plt.axvline(x=now, color='#fbbf24', linestyle='--', label=f'PRESENT: {now.strftime("%b %d")}', linewidth=2, zorder=5)
-    
-    plt.title(f"Humidity Levels for {city.capitalize()}", color='white', fontsize=14, pad=15)
-    plt.xlabel("Datetime", color='#cbd5e1')
+    plt.title(f"Humidity Journey for {city.capitalize()}", color='white', fontsize=14, fontweight='bold')
     plt.ylabel("Humidity (%)", color='#cbd5e1')
-    plt.xticks(rotation=45, color='#cbd5e1')
-    plt.grid(True, linestyle='--', alpha=0.1)
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
     
     ax = plt.gca()
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 12]))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    
+    plt.grid(True, which='major', linestyle='-', alpha=0.1)
+    plt.grid(True, which='minor', linestyle=':', alpha=0.05)
+    plt.xticks(rotation=0)
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
+    
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
@@ -156,26 +171,24 @@ def create_humidity_plot(df, city):
     return f"data:image/png;base64,{plot_url}"
 
 def create_rain_plot(df, city):
-    plt.figure(figsize=(10, 4), facecolor='none')
-    
-    # Sort data
+    plt.figure(figsize=(14, 4), facecolor='none')
     df = df.sort_values('datetime')
     now = pd.Timestamp.now()
     
-    # Use bar chart for rain volume
-    plt.bar(df['datetime'], df['rain'], color='#38bdf8', alpha=0.8, width=0.08, label='Rain Volume (mm)')
+    plt.bar(df['datetime'], df['rain'], color='#38bdf8', alpha=0.8, width=0.08, label='Rain (mm)')
+    plt.axvline(x=now, color='#fbbf24', linestyle='--', label='PRESENT', linewidth=2.5, zorder=5)
     
-    # Add a "NOW" vertical line
-    plt.axvline(x=now, color='#fbbf24', linestyle='--', label=f'PRESENT: {now.strftime("%b %d")}', linewidth=2, zorder=5)
-    
-    plt.title(f"Rain Volume Forecast for {city.capitalize()}", color='white', fontsize=14, pad=15)
-    plt.xlabel("Datetime", color='#cbd5e1')
-    plt.ylabel("Rain Volume (mm)", color='#cbd5e1')
-    plt.xticks(rotation=45, color='#cbd5e1')
-    plt.grid(True, linestyle='--', alpha=0.1, axis='y')
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
+    plt.title(f"Precipitation Journey for {city.capitalize()}", color='white', fontsize=14, fontweight='bold')
+    plt.ylabel("Rain (mm)", color='#cbd5e1')
     
     ax = plt.gca()
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    
+    plt.grid(True, alpha=0.1, axis='y')
+    plt.xticks(rotation=0)
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
+    
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
@@ -224,8 +237,8 @@ def generate_ai_advisory(current_data, future_df, city):
 def index():
     weather_data = None
     if request.method == 'POST':
-        city = request.form.get('city', 'Jaipur').strip()
-        df, current_api_data = fetch_weather_data(city)
+        city = request.form.get('city')
+        df, current_api_data, table_list = fetch_weather_data(city)
         
         if df is not None:
             model, future_df = train_and_predict(df)
@@ -238,7 +251,7 @@ def index():
                 'city': city,
                 'current_temp': round(current_api_data['main']['temp'], 1),
                 'current_humidity': current_api_data['main']['humidity'],
-                'next_pred': round(future_df['predicted_temp'].iloc[0], 1),
+                'next_pred': round(future_df['predicted_temp'].iloc[1], 1), # Use first actual prediction
                 'temp_plot': temp_plot,
                 'humidity_plot': humidity_plot,
                 'rain_plot': rain_plot,
@@ -248,8 +261,8 @@ def index():
                 'weather_desc': current_api_data['weather'][0]['description'].capitalize(),
                 'weather_icon': current_api_data['weather'][0]['icon'],
                 'current_rain': current_api_data.get('rain', {}).get('1h', 0),
-                'api_key': API_KEY, # Needed for browser-side tile loading
-                'table_data': df.head(15).to_dict('records') 
+                'api_key': API_KEY,
+                'table_data': table_list # Use the official OWM table list
             }
         else:
             flash(f"Could not find weather data for '{city}'. Please check the spelling.")
