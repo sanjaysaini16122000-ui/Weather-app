@@ -41,20 +41,26 @@ def fetch_weather_data(city):
                 'rain': round(entry.get('rain', {}).get('3h', 0), 1)
             })
         
-        # 3. Fetch HISTORICAL + FORECAST data from Open-Meteo (Keep for CHARTS)
+        # 3. Fetch HISTORICAL + FORECAST data from Open-Meteo (1 day past + 7 days forecast)
         lat, lon = current_data['coord']['lat'], current_data['coord']['lon']
-        meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relative_humidity_2m,precipitation&past_days=4"
+        # We only fetch 1 past day (April 9th onwards)
+        meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relative_humidity_2m,precipitation&past_days=1"
         meteo_resp = requests.get(meteo_url)
         meteo_data = meteo_resp.json()
         
         # Process Open-Meteo data into a high-resolution DataFrame
         hourly = meteo_data['hourly']
-        df = pd.DataFrame({
+        full_df = pd.DataFrame({
             'datetime': pd.to_datetime(hourly['time']),
             'temp': hourly['temperature_2m'],
             'humidity': hourly['relative_humidity_2m'],
             'rain': hourly['precipitation']
         })
+        
+        # Show 5 Days Total (Yesterday + Today + 3 Future) for maximum detail
+        start_date = full_df['datetime'].min()
+        end_date = start_date + pd.Timedelta(days=5)
+        df = full_df[full_df['datetime'] < end_date].copy()
         
         return df, current_data, table_list
     except Exception as e:
@@ -85,7 +91,7 @@ def train_and_predict(df):
     return model, future_df
 
 def create_plot(df, future_df, city):
-    plt.figure(figsize=(14, 5.5), facecolor='none') # Wider for 11 days
+    plt.figure(figsize=(14, 7), facecolor='none') # Taller and Wider
     
     # Identify index of "Now"
     now = pd.Timestamp.now()
@@ -107,11 +113,11 @@ def create_plot(df, future_df, city):
     # Add a "NOW" vertical line
     plt.axvline(x=now, color='#fbbf24', linestyle='--', label=f'PRESENT', linewidth=2.5, zorder=5)
     
-    plt.title(f"Temperature Journey for {city.capitalize()}", color='white', fontsize=16, pad=25, fontweight='bold')
-    plt.xlabel("Days & Hours (Timeline)", color='#cbd5e1', labelpad=10)
-    plt.ylabel("Temp (°C)", color='#cbd5e1')
+    plt.title(f"Temperature Journey for {city.capitalize()}", color='white', fontsize=28, pad=45, fontweight='bold')
+    plt.xlabel("Timeline", color='#cbd5e1', labelpad=20, fontsize=20)
+    plt.ylabel("Temp (°C)", color='#cbd5e1', fontsize=20)
     
-    # Enhanced Grid (Major = Day, Minor = 6h)
+    # Enhanced Grid
     ax = plt.gca()
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
@@ -120,14 +126,14 @@ def create_plot(df, future_df, city):
     plt.grid(True, which='major', linestyle='-', alpha=0.15)
     plt.grid(True, which='minor', linestyle=':', alpha=0.05)
     
-    plt.xticks(rotation=0, horizontalalignment='center') # Horizontal for readability
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', loc='upper left', fontsize=9)
+    plt.xticks(rotation=0, horizontalalignment='center', fontsize=16) # Ultra Large Ticks
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', loc='upper left', fontsize=16)
     
     # Dark mode spines
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
-    ax.tick_params(colors='#cbd5e1', labelsize=9)
+    ax.tick_params(colors='#cbd5e1', labelsize=16) # Ultra Large Numbers
     
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight', transparent=True)
@@ -137,7 +143,7 @@ def create_plot(df, future_df, city):
     return f"data:image/png;base64,{plot_url}"
 
 def create_humidity_plot(df, city):
-    plt.figure(figsize=(14, 4), facecolor='none')
+    plt.figure(figsize=(14, 6.5), facecolor='none') # Taller
     df = df.sort_values('datetime')
     now = pd.Timestamp.now()
     
@@ -145,8 +151,8 @@ def create_humidity_plot(df, city):
     plt.fill_between(df['datetime'], df['humidity'], color='#10b981', alpha=0.1)
     plt.axvline(x=now, color='#fbbf24', linestyle='--', label='PRESENT', linewidth=2.5, zorder=5)
     
-    plt.title(f"Humidity Journey for {city.capitalize()}", color='white', fontsize=14, fontweight='bold')
-    plt.ylabel("Humidity (%)", color='#cbd5e1')
+    plt.title(f"Humidity Journey for {city.capitalize()}", color='white', fontsize=26, fontweight='bold', pad=35)
+    plt.ylabel("Humidity (%)", color='#cbd5e1', fontsize=18)
     
     ax = plt.gca()
     ax.xaxis.set_major_locator(mdates.DayLocator())
@@ -155,13 +161,13 @@ def create_humidity_plot(df, city):
     
     plt.grid(True, which='major', linestyle='-', alpha=0.1)
     plt.grid(True, which='minor', linestyle=':', alpha=0.05)
-    plt.xticks(rotation=0)
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
+    plt.xticks(rotation=0, fontsize=16)
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=16)
     
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
-    ax.tick_params(colors='#cbd5e1', labelsize=8)
+    ax.tick_params(colors='#cbd5e1', labelsize=16)
     
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight', transparent=True)
@@ -171,28 +177,28 @@ def create_humidity_plot(df, city):
     return f"data:image/png;base64,{plot_url}"
 
 def create_rain_plot(df, city):
-    plt.figure(figsize=(14, 4), facecolor='none')
+    plt.figure(figsize=(14, 6.5), facecolor='none') # Taller
     df = df.sort_values('datetime')
     now = pd.Timestamp.now()
     
     plt.bar(df['datetime'], df['rain'], color='#38bdf8', alpha=0.8, width=0.08, label='Rain (mm)')
     plt.axvline(x=now, color='#fbbf24', linestyle='--', label='PRESENT', linewidth=2.5, zorder=5)
     
-    plt.title(f"Precipitation Journey for {city.capitalize()}", color='white', fontsize=14, fontweight='bold')
-    plt.ylabel("Rain (mm)", color='#cbd5e1')
+    plt.title(f"Precipitation Journey for {city.capitalize()}", color='white', fontsize=26, fontweight='bold', pad=35)
+    plt.ylabel("Rain (mm)", color='#cbd5e1', fontsize=18)
     
     ax = plt.gca()
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
     
     plt.grid(True, alpha=0.1, axis='y')
-    plt.xticks(rotation=0)
-    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=8)
+    plt.xticks(rotation=0, fontsize=16)
+    plt.legend(facecolor='#1e293b', edgecolor='#334155', labelcolor='white', fontsize=16)
     
     ax.set_facecolor('none')
     for spine in ax.spines.values():
         spine.set_edgecolor('#334155')
-    ax.tick_params(colors='#cbd5e1', labelsize=8)
+    ax.tick_params(colors='#cbd5e1', labelsize=16)
     
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight', transparent=True)
