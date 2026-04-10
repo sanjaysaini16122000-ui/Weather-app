@@ -65,7 +65,7 @@ def fetch_weather_data(city):
         return df, current_data, table_list
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return None, None
+        return None, None, None
 
 def train_and_predict(df):
     X = np.array(df.index).reshape(-1, 1)
@@ -268,8 +268,16 @@ def index():
                 'weather_icon': current_api_data['weather'][0]['icon'],
                 'current_rain': current_api_data.get('rain', {}).get('1h', 0),
                 'api_key': API_KEY,
-                'table_data': table_list # Use the official OWM table list
+                'table_data': table_list
             }
+            
+            # Group table data by date for interactive tabs
+            unique_dates = []
+            for item in table_list:
+                d = item['datetime'].strftime('%d %b')
+                if d not in unique_dates:
+                    unique_dates.append(d)
+            weather_data['unique_dates'] = unique_dates
         else:
             flash(f"Could not find weather data for '{city}'. Please check the spelling.")
 

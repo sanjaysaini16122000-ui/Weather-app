@@ -413,7 +413,15 @@
             </div>
 
                 <div class="data-table-container">
-                    <h2>📅 Upcoming Forecast Details</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 style="margin: 0;">📅 Upcoming Forecast Details</h2>
+                        <div class="date-tabs" style="display: flex; gap: 0.5rem;">
+                            <button class="layer-btn active" onclick="filterTable('all', this)">All</button>
+                            {% for date in data.unique_dates %}
+                            <button class="layer-btn" onclick="filterTable('{{ date }}', this)">{{ date }}</button>
+                            {% endfor %}
+                        </div>
+                    </div>
                     <table>
                         <thead>
                             <tr>
@@ -423,9 +431,9 @@
                                 <th>Rain</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="forecastBody">
                             {% for row in data.table_data %}
-                            <tr>
+                            <tr data-date="{{ row.datetime.strftime('%d %b') }}">
                                 <td>{{ row.datetime.strftime('%d %b, %H:%M') if row.datetime.strftime else row.datetime }}</td>
                                 <td>{{ row.temp }}°C</td>
                                 <td>{{ row.humidity }}%</td>
@@ -501,6 +509,22 @@
         // Default Layer (passing null for btn on first load)
         switchLayer('temp', null);
         {% endif %}
+
+        // Interactive Table Filtering
+        function filterTable(date, btn) {
+            const rows = document.querySelectorAll('#forecastBody tr');
+            rows.forEach(row => {
+                if (date === 'all' || row.getAttribute('data-date') === date) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update UI
+            document.querySelectorAll('.date-tabs .layer-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+        }
     </script>
 </body>
 </html>
