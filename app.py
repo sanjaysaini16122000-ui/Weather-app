@@ -91,7 +91,7 @@ def train_and_predict(df):
     return model, future_df
 
 def create_plot(df, future_df, city):
-    plt.figure(figsize=(14, 7), facecolor='none') # Taller and Wider
+    plt.figure(figsize=(14, 5), facecolor='none') # Reduced Height
     
     # Identify index of "Now"
     now = pd.Timestamp.now()
