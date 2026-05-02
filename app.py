@@ -8,14 +8,15 @@ from sklearn.linear_model import LinearRegression
 import numpy as np
 import io
 import base64
+import os
 from flask import Flask, render_template, request, flash
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "secret_weather_key"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "secret_weather_key")
 
 # Configuration
-API_KEY = "fc2a440df17185166db00826c5f20b87"
+API_KEY = os.environ.get("OPENWEATHER_API_KEY")
 BASE_URL = "https://api.openweathermap.org/data/2.5/forecast"
 
 def fetch_weather_data(city):
